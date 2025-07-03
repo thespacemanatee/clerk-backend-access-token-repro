@@ -1,81 +1,149 @@
-<p align="center">
-  <a href="https://clerk.com?utm_source=github&utm_medium=clerk_docs" target="_blank" rel="noopener noreferrer">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="./assets/images/light-logo.png">
-      <img alt="Clerk Logo for light background" src="./assets/images/dark-logo.png" height="64">
-    </picture>
-  </a>
-  <br />
-</p>
-<div align="center">
-  <h1>
-    Clerk and Expo Quickstart
-  </h1>
-  <a href="https://www.npmjs.com/package/@clerk/clerk-js">
-    <img alt="Downloads" src="https://img.shields.io/npm/dm/@clerk/clerk-js" />
-  </a>
-  <a href="https://discord.com/invite/b5rXHjAg7A">
-    <img alt="Discord" src="https://img.shields.io/discord/856971667393609759?color=7389D8&label&logo=discord&logoColor=ffffff" />
-  </a>
-  <a href="https://twitter.com/clerkdev">
-    <img alt="Twitter" src="https://img.shields.io/twitter/url.svg?label=%40clerkdev&style=social&url=https%3A%2F%2Ftwitter.com%2Fclerkdev" />
-  </a>
-  <br />
-  <br />
-  <img alt="Clerk Hero Image" src="./assets/images/hero.png">
-</div>
+# Clerk TikTok OAuth Token Bug - Minimal Reproduction
 
-## Introduction
+This repository demonstrates a critical bug where Clerk's `getUserOauthAccessToken()` method fails to retrieve TikTok OAuth tokens after ~24 hours, returning `oauth_token_retrieval_error` despite the user maintaining an active TikTok connection.
 
-Clerk is a developer-first authentication and user management solution. It provides pre-built React components and hooks for sign-in, sign-up, user profile, and organization management. Clerk is designed to be easy to use and customize, and can be dropped into any React or Next.js application.
+## 🐛 The Bug
 
-After following the quickstart you'll have learned how to:
-
-- Install `@clerk/clerk-expo`
-- Setup your environment key
-- Wrap your Expo app in `<ClerkProvider />` and supply your `tokenCache`
-- Conditionally show content based on your auth state
-- Build your sign-in and sign-up pages
-
-### Branches of this repository
-
-- `main`: The result of following the [Clerk Expo quickstart](https://clerk.com/docs/quickstarts/expo).
-- `advanced`: A more advanced version of the quickstart, with OAuth connections, error handling and styling.
-
-## Running the template
-
-```bash
-git clone https://github.com/clerk/clerk-expo-quickstart
+```typescript
+// This works initially but fails after 24 hours
+await clerkClient.users.getUserOauthAccessToken(userId, "tiktok");
 ```
 
-To run the example locally, you'll need to make sure you have XCode installed and configured properly, then:
+**Error Response After 24 Hours:**
+```json
+{
+  "error": "Token retrieval failed",
+  "code": "oauth_token_retrieval_error",
+  "timestamp": "2025-01-03T12:00:00.000Z"
+}
+```
 
-1. Sign up for a Clerk account at [https://clerk.com](https://dashboard.clerk.com/sign-up?utm_source=DevRel&utm_medium=docs&utm_campaign=templates&utm_content=10-24-2023&utm_term=clerk-expo-quickstart).
+**Impact:** Users must reconnect TikTok daily, making the OAuth integration unusable for production applications.
 
-2. Go to the [Clerk dashboard](https://dashboard.clerk.com?utm_source=DevRel&utm_medium=docs&utm_campaign=templates&utm_content=10-24-2023&utm_term=clerk-expo-quickstart) and create an application.
+## 🚀 Quick Start
 
-3. Set the required Clerk environment variable as shown in [the example `env` file](./.env.example).
+```bash
+# Install dependencies
+bun install
 
-4. `npm install` the required dependencies.
+# Copy environment variables
+cp .env.local.example .env.local
+# Add your Clerk keys to .env.local
 
-5. `npm run start` to launch the development server.
+# Run the app
+bun start
+```
 
-## Learn more
+## 📋 Prerequisites & Setup
 
-To learn more about Clerk and Expo, check out the following resources:
+### 1. Clerk Configuration
 
-- [Quickstart: Get started with Expo and Clerk](https://clerk.com/docs/quickstarts/expo?utm_source=DevRel&utm_medium=docs&utm_campaign=templates&utm_content=10-24-2023&utm_term=clerk-expo-quickstart)
+1. Create an app at [dashboard.clerk.com](https://dashboard.clerk.com)
+2. Navigate to **Configure → SSO Connections**
+3. Enable **TikTok** OAuth provider
+4. Add TikTok credentials:
+   - Client ID (from TikTok)
+   - Client Secret (from TikTok)
+5. Copy your API keys from **API Keys** section
 
-- [Clerk Documentation](https://clerk.com/docs/references/expo/overview?utm_source=DevRel&utm_medium=docs&utm_campaign=templates&utm_content=10-24-2023&utm_term=clerk-expo-quickstart)
+### 2. TikTok Developer Setup
 
-- [Expo Documentation](https://docs.expo.dev/)
+1. Create an app at [developers.tiktok.com](https://developers.tiktok.com)
+2. Configure OAuth settings:
+   - Add Clerk's redirect URL
+   - Enable scope: `user.info.basic`
+3. Copy Client Key & Secret for Clerk
 
-## Found an issue or want to leave feedback
+### 3. Environment Variables
 
-Feel free to create a support thread on our [Discord](https://clerk.com/discord). Our support team will be happy to assist you in the `#support` channel.
+Create `.env.local`:
+```env
+EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_xxxxx
+CLERK_SECRET_KEY=sk_test_xxxxx
+```
 
-## Connect with us
+## 🧪 Testing the Bug
 
-You can discuss ideas, ask questions, and meet others from the community in our [Discord](https://discord.com/invite/b5rXHjAg7A).
+### Step 1: Initial Test (✅ Works)
+1. Sign in with TikTok using the app
+2. Click "Retrieve OAuth Token (Backend)"
+3. Token retrieval succeeds
 
-If you prefer, you can also find support through our [Twitter](https://twitter.com/ClerkDev), or you can [email](mailto:support@clerk.dev) us!
+### Step 2: 24-Hour Test (❌ Fails)
+1. Wait 24+ hours (do not disconnect TikTok)
+2. Click "Retrieve OAuth Token (Backend)" again
+3. Observe `oauth_token_retrieval_error`
+
+### 📊 Persistent Logging
+The app includes persistent logging with:
+- All token retrieval attempts saved to AsyncStorage
+- Collapsible log entries with smooth animations
+- Success/failure indicators with timestamps
+- Clear button to reset logs
+- Keeps last 50 attempts for debugging
+
+## 📁 Project Structure
+
+```
+app/
+├── _layout.tsx              # Main app layout and authentication logic
+├── api/
+│   └── oauth-token+api.ts   # Backend endpoint demonstrating the bug
+└── hooks/
+    └── useTokenLogs.ts      # Custom hook for log management
+
+components/
+├── SignInScreen.tsx         # Sign-in UI component
+├── UserStatusCard.tsx       # User status display component
+├── ActionButtons.tsx        # Action buttons component
+├── LogsSection.tsx          # Logs history section
+└── LogEntryItem.tsx         # Individual log entry with animations
+```
+
+### Key Code Location
+
+The bug occurs in `app/api/oauth-token+api.ts`:
+```typescript
+const tokens = await clerkClient.users.getUserOauthAccessToken(
+  userId,
+  "tiktok"
+);
+```
+
+## 🔍 Technical Details
+
+- **TikTok Access Token Lifetime:** 24 hours
+- **TikTok Refresh Token Lifetime:** 365 days
+- **Expected Behavior:** Clerk should automatically use the refresh token to obtain new access tokens
+- **Actual Behavior:** Clerk fails to refresh, requiring manual reconnection
+
+## 🛠 Troubleshooting
+
+### Common Issues
+
+1. **"Invalid OAuth callback"**
+   - Ensure redirect URLs match exactly in both TikTok and Clerk
+   - Check app scheme configuration
+
+2. **"Provider not enabled"**
+   - Verify TikTok is enabled in Clerk dashboard
+   - Ensure credentials are saved
+
+3. **"Network request failed"**
+   - Check device can reach development server
+   - Verify firewall settings
+
+### Debugging
+
+The backend API includes logging for:
+- Token fetch attempts
+- Error details with timestamps
+- Success/failure states
+
+Monitor console output when testing token retrieval.
+
+## 📞 Support
+
+- **Bug Reports:** Open an issue in this repository
+- **Clerk Support:** Reference this reproduction when contacting support
+- **TikTok OAuth Docs:** [developers.tiktok.com/doc/login-kit-web](https://developers.tiktok.com/doc/login-kit-web)
