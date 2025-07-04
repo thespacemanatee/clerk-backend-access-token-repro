@@ -35,11 +35,17 @@ export async function GET(request: Request) {
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
-    console.error(`[${new Date().toISOString()}] OAuth token error:`, {
-      error: error.message,
-      code: error.code,
-      status: error.status,
-    });
+    console.error(`[${new Date().toISOString()}] OAuth token error`);
+    if (error && typeof error === "object" && "status" in error) {
+      return Response.json(
+        {
+          error,
+          code: error.errors[0].code,
+          timestamp: new Date().toISOString(),
+        },
+        { status: error.status as number }
+      );
+    }
 
     return Response.json(
       {
